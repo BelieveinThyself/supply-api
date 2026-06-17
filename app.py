@@ -78,37 +78,25 @@ def login():
         return jsonify({"access_token": token}), 200
     return jsonify({"msg": "Bad credentials"}), 401
 
-@app.route('/api/profile', methods=['PUT'])
+@app.route('/api/profile', methods=['PUT', 'OPTIONS'])
 @jwt_required()
 def update_profile():
-    print("=== REACHED MY FUNCTION ===")
-    print("Form data:", request.form)
-    print("Files:", list(request.files.keys()))
     current_user_id = get_jwt_identity()
+    name = request.json.get('name')
+    
+    # Hardcoded but unique per user - no uploads needed
+    profile_pic = f"https://i.pravatar.cc/300?u={current_user_id}"
+    
     conn = get_db()
-
-    name = request.form.get('name')
-    file = request.files.get('profile_pic')
-    filename = None
-
-    if file and allowed_file(file.filename):
-        filename = secure_filename(f"user_{current_user_id}_{file.filename}")
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
     if name:
-        conn.execute("UPDATE users SET name =? WHERE id =?", (name, current_user_id))
-    if filename:
-        conn.execute("UPDATE users SET profile_pic =? WHERE id =?", (filename, current_user_id))
-
+        conn.execute("UPDATE users SET name=?, profile_pic=? WHERE id=?", (name, profile_pic, current_user_id))
+    else:
+        conn.execute("UPDATE users SET profile_pic=? WHERE id=?", (profile_pic, current_user_id))
     conn.commit()
     conn.close()
-    return jsonify({"msg": "Profile updated"}), 200
+    
+    return jsonify({"msg": "Profile updated", "profile_pic": profile_pic}), 200
 
-# NEW: Serve profile pictures
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # NEW: Get profile data
 @app.route('/api/profile', methods=['GET'])
@@ -120,7 +108,7 @@ def get_profile():
     conn.close()
 
     if user:
-        pic_url = f"/uploads/{user['profile_pic']}" if user['profile_pic'] else None
+        pic_url = user['profile_pic'] if user['profile_pic'] else None
         return jsonify({"id": user['id'], "name": user['name'], "email": user['email'], "profile_pic": pic_url})
     return jsonify({"msg": "User not found"}), 404
 
