@@ -112,14 +112,14 @@ def get_profile():
     current_user_id = get_jwt_identity()
 
     # Extract brand name from email: "acme.supplies@gmail.com" → "Acme Supplies"
-    username = current_user_id
+    email = current_user_id
     raw_name = email.split('@')[0] # "acme.supplies"
-    name = username.replace('.', ' ').replace('_', ' ').title() # "Acme Supplies"
+    name = raw_name.replace('.', ' ').replace('_', ' ').title() # "Acme Supplies"
 
     return jsonify({
         "id": current_user_id,
         "name": name, # <-- This shows top right
-        "username": username,
+        "email": email,
         "profile_pic": None
     }), 200
 # START SERVER
