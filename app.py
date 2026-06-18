@@ -9,8 +9,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 CORS(app, 
-     resources={r"/api/*": {"origins": ["http://localhost:5173", "https://africonnect-project.netlify.app"]}}, 
-     supports_credentials=True)
+     origins=["http://localhost:5173"],  # NO "*" here
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "OPTIONS"]
+)
 
 # Config
 app.config['JWT_SECRET_KEY'] = 'change-this-to-random-string'
