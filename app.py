@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import sqlite3
 import os
@@ -7,13 +8,16 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+CORS(app, 
+     resources={r"/api/*": {"origins": ["http://localhost:5173", "https://africonnect-project.netlify.app"]}}, 
+     supports_credentials=True)
 
 # Config
 app.config['JWT_SECRET_KEY'] = 'change-this-to-random-string'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 # 10MB max
 
-CORS(app)
+
 jwt = JWTManager(app)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -103,15 +107,18 @@ def update_profile():
 @jwt_required()
 def get_profile():
     current_user_id = get_jwt_identity()
-    conn = get_db()
-    user = conn.execute("SELECT id, name, email, profile_pic FROM users WHERE id =?", (current_user_id,)).fetchone()
-    conn.close()
 
-    if user:
-        pic_url = user['profile_pic'] if user['profile_pic'] else None
-        return jsonify({"id": user['id'], "name": user['name'], "email": user['email'], "profile_pic": pic_url})
-    return jsonify({"msg": "User not found"}), 404
+    # Extract brand name from email: "acme.supplies@gmail.com" → "Acme Supplies"
+    email = current_user_id
+    raw_name = email.split('@')[0] # "acme.supplies"
+    name = raw_name.replace('.', ' ').replace('_', ' ').title() # "Acme Supplies"
 
+    return jsonify({
+        "id": current_user_id,
+        "name": name, # <-- This shows top right
+        "email": email,
+        "profile_pic": None
+    }), 200
 # START SERVER
 if __name__ == '__main__':
     init_db()
